@@ -1,7 +1,7 @@
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
+import jwt from 'jsonwebtoken'
 import { generateToken } from "../lib/utils.js";
-import cloudinary from "../lib/cloudinary.js";
 
 
 //signup function logic
@@ -16,7 +16,7 @@ export const signup = async (req ,res) => {
     }
 
     //check length of password
-    if (password.length > 6) {
+    if (password.length < 6) {
         return res.status(400).json({ message: "Password must be at least 6 characters"});
     }
 
@@ -42,13 +42,12 @@ export const signup = async (req ,res) => {
 
     //If we were succesful in creating the user account
     if(newUser) {
+        await newUser.save();
         //generate JWT token here - which we can create in "../lib/utils.js"
         generateToken(newUser._id, res);  //MONGODB user _id to store
 
-        await newUser.save();
-        
         res.status(201).json({
-            _id:newUser, _id,
+            _id: newUser._id,
             fullName: newUser.fullName,
             email: newUser.email,
             profilePic: newUser.profilePic,
@@ -107,36 +106,25 @@ export const logout = (req ,res) => {
     }
 };
 
-//to update content in the user profile
-export const updateProfile = async (req,res) => {
+// check current auth status
+export const check = async (req, res) => {
     try {
-        const {profilePic} = req.body;
-        const userId = req.user._id;
+        const token = req.cookies?.jwt;
+        if (!token) return res.status(401).json({ message: 'Not authenticated' });
 
-        if(!profilePic) {
-            return res.status(400).json({ message: "Profile pic is required"});
-        }
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await User.findById(decoded.userId).select('-password');
+        if (!user) return res.status(404).json({ message: 'User not found' });
 
-        const uploadResponse = await cloudinary.uploader.upload(profilePic);
-        //update in database
-        const updatedUser = await User.findByIdAndUpdate(userId, {profilePic:uploadResponse.secret_url}, {new:true});
-
-        res.status(200).json(updatedUser);
+        res.status(200).json({
+            _id: user._id,
+            fullName: user.fullName,
+            email: user.email,
+            profilePic: user.profilePic,
+        });
+    } catch (error) {
+        console.log('Error in check controller', error.message);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
-    catch(error) {
-        console.log("Error in updating profile", error);
-        res.status(500).json({ message: "internal server error"});
-    }
-}
-
-export const checkAuth = (req, res) => {
-    try {
-        res.status(200).json(req.user);
-    }
-    catch(error) {
-        console.log("Error in checkAuth controller", error.messaage);
-        res.status(500).json({ message: "Internal Server Error "});
-    }
-}
-
+};
 
