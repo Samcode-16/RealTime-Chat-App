@@ -1,11 +1,32 @@
 import { useAuthStore } from "../store/useAuthstore";
-import {Camera, User} from "lucide-react";
+import {Camera, User, Mail} from "lucide-react";
 
 const ProfilePage = () => {
    const {authUser , isUpdatingProfile , updateProfile}=useAuthStore()
 
-   const handleImageUpload = async(e) => {}
+   const handleImageUpload = async(e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
+    // Check file size (max 2MB)
+    const maxSize = 2 * 1024 * 1024; // 2MB in bytes
+    if (file.size > maxSize) {
+      toast.error("Please choose an image under 2MB");
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+
+    try {
+      await updateProfile(file);
+    } catch (error) {
+      console.error("Error uploading image:", error);
+    }
+   }
 
   return (
     <div className="h-screen pt-20">
