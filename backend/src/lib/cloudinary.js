@@ -11,5 +11,19 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+export const uploadImage = async (imagePath) => {
+    try {
+        const result = await cloudinary.uploader.upload(imagePath, {
+            folder: "chat-app-profiles",
+            width: 300,
+            crop: "scale",
+        });
+        return result;
+    } catch (error) {
+        console.error("Error uploading to cloudinary:", error);
+        throw new Error("Could not upload image");
+    }
+};
+
 export default cloudinary;
 

@@ -2,6 +2,7 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from 'jsonwebtoken'
 import { generateToken } from "../lib/utils.js";
+import { uploadImage } from "../lib/cloudinary.js";
 
 
 //signup function logic
@@ -125,6 +126,38 @@ export const check = async (req, res) => {
     } catch (error) {
         console.log('Error in check controller', error.message);
         res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+// update profile picture
+export const updateProfile = async (req, res) => {
+    try {
+        const profilePic = req.files?.profilePic;
+
+        if (!profilePic) {
+            return res.status(400).json({ message: "No file uploaded" });
+        }
+
+        // Upload to cloudinary
+        const result = await uploadImage(profilePic.tempFilePath);
+
+        // Update user profile
+        const user = await User.findByIdAndUpdate(
+            req.user._id,
+            { profilePic: result.secure_url },
+            { new: true }
+        ).select("-password");
+
+        res.status(200).json({
+            _id: user._id,
+            fullName: user.fullName,
+            email: user.email,
+            profilePic: user.profilePic,
+        });
+
+    } catch (error) {
+        console.log("Error in updateProfile controller", error.message);
+        res.status(500).json({ message: "Error uploading profile picture" });
     }
 };
 

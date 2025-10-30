@@ -11,7 +11,7 @@ router.get('/', (req, res) => {
 
 
 //endpoint to see users in the sidebar
-router.get("/user", protectRoute, getUsersForSidebar);
+router.get("/users", protectRoute, getUsersForSidebar);
 router.get("/:id", protectRoute, getMessages);
 
 router.post("/send/:id", protectRoute, sendMessage)

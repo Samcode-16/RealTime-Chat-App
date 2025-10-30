@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { axiosInstance } from '../lib/axios.js'
 import toast from 'react-hot-toast'
-import { data } from 'react-router-dom'
 
 export const useAuthStore = create((set) => ({
   authUser: null,
@@ -9,6 +8,7 @@ export const useAuthStore = create((set) => ({
   isLoggingIn: false,
   isUpdatingProfile: false,
   isCheckingAuth: true,
+  onlineUsers: [],
 
   checkAuth: async () => {
     try {
@@ -76,6 +76,25 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  updateProfile: async(data) => {},
+  updateProfile: async(imageFile) => {
+    set({ isUpdatingProfile: true });
+    try {
+      const formData = new FormData();
+      formData.append("profilePic", imageFile);
+
+      const res = await axiosInstance.patch("/auth/update", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      set({ authUser: res.data });
+      toast.success("Profile picture updated successfully!");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Couldn't update profile picture");
+    } finally {
+      set({ isUpdatingProfile: false });
+    }
+  },
 }));
 

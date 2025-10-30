@@ -7,19 +7,19 @@ import ProfilePage from "./pages/ProfilePage";
 
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthstore";
+
 import { useEffect } from "react";
 import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
+import { useThemeStore } from "./store/useTHEMEStore";
 
 const App = () => {
   const { authUser, isCheckingAuth, checkAuth } = useAuthStore();
+  const { theme } = useThemeStore(); // ✅ fixed here
 
   useEffect(() => {
-    // Run auth check once on mount. `checkAuth` is stable in the store but
-    // including it in deps caused repeated calls in development; call once.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     checkAuth();
-  }, []);
+  }, [checkAuth]);
 
   console.log({ authUser });
 
@@ -31,7 +31,7 @@ const App = () => {
     );
 
   return (
-    <div>
+    <div data-theme={theme}>
       <Navbar />
 
       <Routes>

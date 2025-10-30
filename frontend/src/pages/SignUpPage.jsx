@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link } from 'react-router-dom';
 import AuthImagePatter from '../components/AuthimagePattern';
 import toast from 'react-hot-toast';
+import { axiosInstance } from '../lib/axios'
 
 const SignUpPage = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -30,25 +31,15 @@ const SignUpPage = () => {
 
     try {
       setIsSigningUp(true);
-      const response = await fetch("http://localhost:5001/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success("Account created successfully!");
-        console.log("User created:", data);
-      } else {
-        toast.error(data.message || "Signup failed");
-      }
+      const res = await axiosInstance.post('/auth/signup', formData)
+      toast.success('Account created successfully!')
+      console.log('User created:', res.data)
     } catch (error) {
-      toast.error("Something went wrong. Please try again.");
-      console.error(error);
+      const msg = error?.response?.data?.message || 'Signup failed'
+      toast.error(msg)
+      console.error(error)
     } finally {
-      setIsSigningUp(false);
+      setIsSigningUp(false)
     }
   };
 
