@@ -5,7 +5,7 @@ import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 
 const ChatContainer = () => {
-  const { messages, getMessages, isMessagesLoading, selectedUser} = useChatStore()
+  const { messages, getMessages, isMessagesLoading, selectedUser} = useChatStore();
 
   useEffect(() => {
     getMessages(selectedUser._id)
