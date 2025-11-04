@@ -41,11 +41,20 @@ export const sendMessage = async (req, res) => {
         const { id: receiverId } = req.params;
         const senderId = req.user._id;
 
-        let imageUrl;
+        let imageUrl = null;
         if (image) {
-            //upload base4 image to cloudinary
-            const uploadResponse = await cloudinary.uploader.upload(image);
-            imageUrl = uploadResponse.secure_url;
+            try {
+                //upload base64 image to cloudinary
+                console.log("Uploading image to Cloudinary...");
+                const uploadResponse = await cloudinary.uploader.upload(image, {
+                    folder: "chat-app-messages",
+                });
+                imageUrl = uploadResponse.secure_url;
+                console.log("Image uploaded successfully:", imageUrl);
+            } catch (uploadError) {
+                console.error("Cloudinary upload error:", uploadError);
+                return res.status(500).json({ error: "Failed to upload image" });
+            }
         }
 
         const newMessage = new Message({
@@ -63,6 +72,7 @@ export const sendMessage = async (req, res) => {
     }
     catch (error) {
         console.log("Error in sendMessage controller: ", error.message);
+        console.error("Full error:", error);
         res.status(500).json({error: "Internal server error"});
     }
 }

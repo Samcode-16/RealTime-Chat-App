@@ -15,7 +15,8 @@ const PORT = process.env.PORT || 5001;
 connectDB();
 
 // Middlewares
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Increased limit for base64 images
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cookieParser());
 app.use(cors({
     origin: process.env.FRONTEND_URL || "http://localhost:5173",
@@ -26,7 +27,7 @@ app.use(cors({
 app.use(fileUpload({
     useTempFiles: true,
     tempFileDir: '/tmp/',
-    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max file size
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max file size
 }));
 
 // Routes
