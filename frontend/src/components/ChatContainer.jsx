@@ -8,19 +8,36 @@ import { formatMessageTime } from "../lib/utils"; // Utility to format timestamp
 
 const ChatContainer = () => {
   // HOOK: Get chat state and actions from Zustand store
-  const { messages, getMessages, isMessagesLoading, selectedUser } = useChatStore();
+  const { messages, getMessages, isMessagesLoading, selectedUser, subscribeToMessages,
+    unsubscribeFromMessages 
+   } = useChatStore();
   
   // HOOK: Get authenticated user info from auth store
   const { authUser } = useAuthStore();
+  const messageEndRef = useRef(null);
 
   // EFFECT: Fetch messages when a user is selected
   // This runs whenever selectedUser changes
   useEffect(() => {
+    // Only fetch messages if a user is selected
     if (selectedUser?._id) {
       // Call getMessages action to fetch conversation history
       getMessages(selectedUser._id);
+
+      // Subscribe to real-time messages for this conversation
+      subscribeToMessages();
+
+      // Cleanup: Unsubscribe when component unmounts or user changes
+      return () => unsubscribeFromMessages();
     }
-  }, [selectedUser?._id, getMessages]) // Dependencies: re-run when these change
+  }, [selectedUser?._id, getMessages, subscribeToMessages, unsubscribeFromMessages]); // Dependencies: re-run when these change
+
+  useEffect(() => {
+    if (messageEndRef.current && messages) {
+      messageEndRef.current.scrollIntoView({ behaviour: "smooth"});
+    }
+  }, [messages])
+
 
   // CONDITIONAL RENDER: Show loading state while fetching messages
   if (isMessagesLoading)
@@ -39,6 +56,7 @@ const ChatContainer = () => {
             key={message._id} // Unique key for React list rendering
             // Conditional class: align message right if sent by me, left if received
             className={`chat ${message.senderId === authUser._id ? "chat-end" : "chat-start"}`}
+            ref={messageEndRef}
           > 
             {/* Profile picture of message sender */}
             <div className="chat-image avatar">

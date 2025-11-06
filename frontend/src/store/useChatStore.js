@@ -1,16 +1,18 @@
-import { create } from "zustand"; // State management library
-import toast from "react-hot-toast"; // Library for showing toast notifications
+import { create } from "zustand";            // State management library
+import toast from "react-hot-toast";          // Library for showing toast notifications
 import { axiosInstance } from "../lib/axios"; // Pre-configured axios for API calls
+import { useAuthStore } from "./useAuthstore";
+
 
 // Zustand store for chat-related state and actions
 // This manages all chat functionality (messages, users, selections)
 export const useChatStore = create((set, get) => ({
     // STATE: Store chat data
-    messages: [], // Array of messages in current conversation
-    users: [], // Array of all available users to chat with
-    selectedUser: null, // Currently selected user for chatting
-    isUsersLoading: false, // Loading state while fetching users
-    isMessagesLoading: false, // Loading state while fetching messages
+    messages: [],                    // Array of messages in current conversation
+    users: [],                       // Array of all available users to chat with
+    selectedUser: null,              // Currently selected user for chatting
+    isUsersLoading: false,           // Loading state while fetching users
+    isMessagesLoading: false,        // Loading state while fetching messages
 
     // ACTION: Fetch all users available for chat (called in Sidebar)
     getUsers: async () => {
@@ -64,7 +66,26 @@ export const useChatStore = create((set, get) => ({
         }
     },
 
+    subscribeToMessages: () => {
+        const { selectedUser }= get();
+        if(!selectedUser) return;
+
+        const socket = useAuthStore.getState().socket;
+
+        //todo: optimize this one later
+        socket.on("newMessage", (newMessage) => {
+            set({
+                messages: [...get().messages, newMessage],
+            });
+        });
+    },
+
+    unsubscribeFromMessages: () => {
+        const socket = useAuthStore.getState().socket;
+        socket.off("newMessage");
+    },
+
     // ACTION: Set the currently selected user for chat (called when clicking user in Sidebar)
     setSelectedUser: (selectedUser) => set({ selectedUser }),
-}))
+}));
 
