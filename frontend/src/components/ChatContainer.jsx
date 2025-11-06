@@ -1,37 +1,51 @@
-import {useChatStore } from "../store/useChatStore";
-import { useEffect } from "react";
+import { useChatStore } from "../store/useChatStore"; // Import chat state and actions
+import { useEffect } from "react"; // React hook for side effects
 
-import ChatHeader from "./ChatHeader";
-import MessageInput from "./MessageInput";
-import { useAuthStore } from "../store/useAuthstore";
-import { formatMessageTime } from "../lib/utils";
+import ChatHeader from "./ChatHeader"; // Component showing selected user info
+import MessageInput from "./MessageInput"; // Component for sending messages
+import { useAuthStore } from "../store/useAuthstore"; // Import auth state (for current user)
+import { formatMessageTime } from "../lib/utils"; // Utility to format timestamps
 
 const ChatContainer = () => {
-  const { messages, getMessages, isMessagesLoading, selectedUser} = useChatStore();
+  // HOOK: Get chat state and actions from Zustand store
+  const { messages, getMessages, isMessagesLoading, selectedUser } = useChatStore();
+  
+  // HOOK: Get authenticated user info from auth store
   const { authUser } = useAuthStore();
 
+  // EFFECT: Fetch messages when a user is selected
+  // This runs whenever selectedUser changes
   useEffect(() => {
     if (selectedUser?._id) {
+      // Call getMessages action to fetch conversation history
       getMessages(selectedUser._id);
     }
-  }, [selectedUser?._id, getMessages])
+  }, [selectedUser?._id, getMessages]) // Dependencies: re-run when these change
 
-  if(isMessagesLoading)
+  // CONDITIONAL RENDER: Show loading state while fetching messages
+  if (isMessagesLoading)
     return <div>Loading...</div>
   
   return (
     <div className="flex-1 flex flex-col overflow-auto">
+      {/* Header showing selected user's info */}
       <ChatHeader />
+      
+      {/* Messages container - scrollable area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Loop through messages array and render each message */}
         {messages.map((message) => (
           <div
-            key={message._id}
+            key={message._id} // Unique key for React list rendering
+            // Conditional class: align message right if sent by me, left if received
             className={`chat ${message.senderId === authUser._id ? "chat-end" : "chat-start"}`}
           > 
+            {/* Profile picture of message sender */}
             <div className="chat-image avatar">
               <div className="size-10 rounded-full border">
                 <img 
                   src={
+                    // Show my profile pic if I sent it, otherwise show other user's pic
                     message.senderId === authUser._id 
                       ? authUser.profilePic || "/avatar.png" 
                       : selectedUser.profilePic || "/avatar.png"
@@ -40,12 +54,17 @@ const ChatContainer = () => {
                 />
               </div>
             </div>
+            
+            {/* Timestamp showing when message was sent */}
             <div className="chat-header mb-1">
               <time className="text-xs opacity-50 ml-1">
                 {formatMessageTime(message.createdAt)}
               </time>
             </div>
+            
+            {/* Message bubble containing text and/or image */}
             <div className="chat-bubble flex flex-col">
+              {/* Show image if message has one */}
               {message.image && (
                 <img 
                   src={message.image} 
@@ -53,12 +72,14 @@ const ChatContainer = () => {
                   className="sm:max-w-[200px] rounded-md mb-2"
                 />
               )}
+              {/* Show text if message has text */}
               {message.text && <p>{message.text}</p>}
             </div>
           </div>
         ))}
       </div>
 
+      {/* Input component for sending new messages */}
       <MessageInput />
     </div>
   )
