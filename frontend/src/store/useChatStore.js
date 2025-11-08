@@ -1,8 +1,7 @@
-import { create } from "zustand";            // State management library
-import toast from "react-hot-toast";          // Library for showing toast notifications
-import { axiosInstance } from "../lib/axios"; // Pre-configured axios for API calls
+import { create } from "zustand";
+import toast from "react-hot-toast";
+import { axiosInstance } from "../lib/axios";
 import { useAuthStore } from "./useAuthstore";
-
 
 // Zustand store for chat-related state and actions
 // This manages all chat functionality (messages, users, selections)
@@ -72,8 +71,11 @@ export const useChatStore = create((set, get) => ({
 
         const socket = useAuthStore.getState().socket;
 
-        //todo: optimize this one later
+        
         socket.on("newMessage", (newMessage) => {
+            const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
+            if(!isMessageSentFromSelectedUser) return;
+
             set({
                 messages: [...get().messages, newMessage],
             });

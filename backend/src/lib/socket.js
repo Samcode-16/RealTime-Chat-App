@@ -1,6 +1,6 @@
-import { Server } from "socket.io"; // Socket.IO for real-time communication
-import http from "http"; // Node.js HTTP module
-import express from "express"; // Express framework
+import { Server } from "socket.io";
+import http from "http";
+import express from "express";
 
 // Create Express app
 const app = express();

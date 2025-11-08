@@ -1,10 +1,10 @@
-import { useChatStore } from "../store/useChatStore"; // Import chat state and actions
-import { useEffect } from "react"; // React hook for side effects
+import { useChatStore } from "../store/useChatStore"; 
+import { useEffect, useRef } from "react"; 
 
-import ChatHeader from "./ChatHeader"; // Component showing selected user info
-import MessageInput from "./MessageInput"; // Component for sending messages
-import { useAuthStore } from "../store/useAuthstore"; // Import auth state (for current user)
-import { formatMessageTime } from "../lib/utils"; // Utility to format timestamps
+import ChatHeader from "./ChatHeader";
+import MessageInput from "./MessageInput";
+import { useAuthStore } from "../store/useAuthstore";
+import { formatMessageTime } from "../lib/utils";
 
 const ChatContainer = () => {
   // HOOK: Get chat state and actions from Zustand store
@@ -34,7 +34,7 @@ const ChatContainer = () => {
 
   useEffect(() => {
     if (messageEndRef.current && messages) {
-      messageEndRef.current.scrollIntoView({ behaviour: "smooth"});
+      messageEndRef.current.scrollIntoView({ behavior: "smooth"});
     }
   }, [messages])
 
@@ -56,7 +56,6 @@ const ChatContainer = () => {
             key={message._id} // Unique key for React list rendering
             // Conditional class: align message right if sent by me, left if received
             className={`chat ${message.senderId === authUser._id ? "chat-end" : "chat-start"}`}
-            ref={messageEndRef}
           > 
             {/* Profile picture of message sender */}
             <div className="chat-image avatar">
@@ -95,6 +94,7 @@ const ChatContainer = () => {
             </div>
           </div>
         ))}
+        <div ref={messageEndRef} />
       </div>
 
       {/* Input component for sending new messages */}

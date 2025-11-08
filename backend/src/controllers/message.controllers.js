@@ -1,8 +1,8 @@
-import User from "../models/user.model.js"; // User database model
-import Message from "../models/message.model.js"; // Message database model
+import User from "../models/user.model.js";
+import Message from "../models/message.model.js";
 
-import cloudinary from "../lib/cloudinary.js"; // Cloudinary for image uploads
-import { getReceiverSocketId, io } from "../lib/socket.js"; // Socket.io for real-time messaging
+import cloudinary from "../lib/cloudinary.js";
+import { getReceiverSocketId, io } from "../lib/socket.js";
 
 
 // CONTROLLER: Get all users except the logged-in user (for sidebar)

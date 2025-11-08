@@ -1,6 +1,7 @@
-import { useRef, useState } from "react"; // React hooks for refs and state
-import { useChatStore } from "../store/useChatStore"; // Import chat actions
-import { Image, X, Send } from "lucide-react"; // Icon components
+import { useRef, useState } from "react";
+import { useChatStore } from "../store/useChatStore";
+import { Image, X, Send } from "lucide-react";
+import toast from "react-hot-toast";
 
 const MessageInput = () => {
   // STATE: Track message text input

@@ -1,7 +1,7 @@
-import { create } from 'zustand' // State management library
-import { axiosInstance } from '../lib/axios.js' // Pre-configured axios for API calls
-import toast from 'react-hot-toast' // Library for showing toast notifications
-import { io } from "socket.io-client"; // Socket.io client for real-time communication
+import { create } from 'zustand'
+import { axiosInstance } from '../lib/axios.js'
+import toast from 'react-hot-toast'
+import { io } from "socket.io-client";
 
 const BASE_URL = "http://localhost:5001";
 
