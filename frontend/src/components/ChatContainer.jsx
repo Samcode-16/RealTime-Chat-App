@@ -9,8 +9,7 @@ import { formatMessageTime } from "../lib/utils";
 const ChatContainer = () => {
   // HOOK: Get chat state and actions from Zustand store
   const { messages, getMessages, isMessagesLoading, selectedUser, subscribeToMessages,
-    unsubscribeFromMessages 
-   } = useChatStore();
+    unsubscribeFromMessages } = useChatStore();
   
   // HOOK: Get authenticated user info from auth store
   const { authUser } = useAuthStore();

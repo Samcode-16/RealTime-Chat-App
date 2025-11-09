@@ -71,7 +71,9 @@ export const useChatStore = create((set, get) => ({
 
         const socket = useAuthStore.getState().socket;
 
-        
+        // If socket is not connected yet, skip subscribing. The auth store will initialize socket after login.
+        if (!socket) return;
+
         socket.on("newMessage", (newMessage) => {
             const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
             if(!isMessageSentFromSelectedUser) return;
@@ -84,6 +86,7 @@ export const useChatStore = create((set, get) => ({
 
     unsubscribeFromMessages: () => {
         const socket = useAuthStore.getState().socket;
+        if (!socket) return;
         socket.off("newMessage");
     },
 
