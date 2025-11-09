@@ -1,81 +1,106 @@
-import { Paperclip, SendHorizontal, Smile } from "lucide-react";
+import { useChatStore } from "../store/useChatStore"; 
+import { useEffect, useRef } from "react"; 
+
+import ChatHeader from "./ChatHeader";
+import MessageInput from "./MessageInput";
 import { useAuthStore } from "../store/useAuthstore";
-import { useChatStore } from "../store/useChatStore";
+import { formatMessageTime } from "../lib/utils";
 
 const ChatContainer = () => {
-  const { selectedUser } = useChatStore();
+  // HOOK: Get chat state and actions from Zustand store
+  const { messages, getMessages, isMessagesLoading, selectedUser, subscribeToMessages,
+    unsubscribeFromMessages 
+   } = useChatStore();
+  
+  // HOOK: Get authenticated user info from auth store
   const { authUser } = useAuthStore();
+  const messageEndRef = useRef(null);
 
+  // EFFECT: Fetch messages when a user is selected
+  // This runs whenever selectedUser changes
+  useEffect(() => {
+    // Only fetch messages if a user is selected
+    if (selectedUser?._id) {
+      // Call getMessages action to fetch conversation history
+      getMessages(selectedUser._id);
+
+      // Subscribe to real-time messages for this conversation
+      subscribeToMessages();
+
+      // Cleanup: Unsubscribe when component unmounts or user changes
+      return () => unsubscribeFromMessages();
+    }
+  }, [selectedUser?._id, getMessages, subscribeToMessages, unsubscribeFromMessages]); // Dependencies: re-run when these change
+
+  useEffect(() => {
+    if (messageEndRef.current && messages) {
+      messageEndRef.current.scrollIntoView({ behavior: "smooth"});
+    }
+  }, [messages])
+
+
+  // CONDITIONAL RENDER: Show loading state while fetching messages
+  if (isMessagesLoading)
+    return <div>Loading...</div>
+  
   return (
-    <div className="flex-1 flex flex-col">
-      {/* Chat Header */}
-      <div className="bg-base-100 border-b border-base-300 px-6 py-4">
-        <div className="flex items-center gap-3">
-          <img 
-            src={selectedUser?.profilePic || "/avatar.png"}
-            alt={selectedUser?.fullName}
-            className="w-10 h-10 rounded-full object-cover"
-          />
-          <div>
-            <h2 className="font-medium">{selectedUser?.fullName}</h2>
-            <p className="text-sm text-base-content/70">Online</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto px-6 py-8">
-        {/* This will be replaced with actual messages */}
-        <div className="space-y-6">
-          <div className="flex gap-3">
-            <img
-              src={selectedUser?.profilePic || "/avatar.png"}
-              alt={selectedUser?.fullName}
-              className="w-8 h-8 rounded-full object-cover"
-            />
-            <div className="bg-base-300 rounded-2xl p-3 max-w-[80%]">
-              <p>Hey! How are you?</p>
-              <span className="text-[10px] text-base-content/70">12:30 PM</span>
+    <div className="flex-1 flex flex-col overflow-auto">
+      {/* Header showing selected user's info */}
+      <ChatHeader />
+      
+      {/* Messages container - scrollable area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Loop through messages array and render each message */}
+        {messages.map((message) => (
+          <div
+            key={message._id} // Unique key for React list rendering
+            // Conditional class: align message right if sent by me, left if received
+            className={`chat ${message.senderId === authUser._id ? "chat-end" : "chat-start"}`}
+          > 
+            {/* Profile picture of message sender */}
+            <div className="chat-image avatar">
+              <div className="size-10 rounded-full border">
+                <img 
+                  src={
+                    // Show my profile pic if I sent it, otherwise show other user's pic
+                    message.senderId === authUser._id 
+                      ? authUser.profilePic || "/avatar.png" 
+                      : selectedUser.profilePic || "/avatar.png"
+                  }
+                  alt="profile pic" 
+                />
+              </div>
+            </div>
+            
+            {/* Timestamp showing when message was sent */}
+            <div className="chat-header mb-1">
+              <time className="text-xs opacity-50 ml-1">
+                {formatMessageTime(message.createdAt)}
+              </time>
+            </div>
+            
+            {/* Message bubble containing text and/or image */}
+            <div className="chat-bubble flex flex-col">
+              {/* Show image if message has one */}
+              {message.image && (
+                <img 
+                  src={message.image} 
+                  alt="attachment" 
+                  className="sm:max-w-[200px] rounded-md mb-2"
+                />
+              )}
+              {/* Show text if message has text */}
+              {message.text && <p>{message.text}</p>}
             </div>
           </div>
-
-          <div className="flex gap-3 justify-end">
-            <div className="bg-primary text-primary-content rounded-2xl p-3 max-w-[80%]">
-              <p>I'm good, thanks! How about you?</p>
-              <span className="text-[10px] text-primary-content/70">12:31 PM</span>
-            </div>
-            <img
-              src={authUser?.profilePic || "/avatar.png"}
-              alt={authUser?.fullName}
-              className="w-8 h-8 rounded-full object-cover"
-            />
-          </div>
-        </div>
+        ))}
+        <div ref={messageEndRef} />
       </div>
 
-      {/* Message Input */}
-      <div className="bg-base-100 border-t border-base-300 px-6 py-4">
-        <div className="flex items-center gap-2">
-          <button className="btn btn-ghost btn-sm btn-circle">
-            <Paperclip className="w-5 h-5" />
-          </button>
-          <div className="flex-1 flex items-center gap-2 bg-base-200 rounded-full px-4 py-2">
-            <input
-              type="text"
-              placeholder="Type a message..."
-              className="flex-1 bg-transparent border-none outline-none placeholder:text-base-content/50"
-            />
-            <button className="btn btn-ghost btn-sm btn-circle">
-              <Smile className="w-5 h-5" />
-            </button>
-          </div>
-          <button className="btn btn-primary btn-sm btn-circle">
-            <SendHorizontal className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
+      {/* Input component for sending new messages */}
+      <MessageInput />
     </div>
-  );
+  )
 };
 
 export default ChatContainer;
