@@ -5,6 +5,7 @@ import cors from "cors";
 
 import path from "path";
 import http from "http";
+import net from "net";
 
 import fileUpload from "express-fileupload";
 
@@ -18,7 +19,7 @@ import { initSocket } from "./lib/socket.js";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5001;
+const DESIRED_PORT = Number(process.env.PORT) || 5001;
 const __dirname = path.resolve();
 
 // Create HTTP server and attach socket.io later
@@ -60,6 +61,42 @@ if(process.env.NODE_ENV==="production"){
 // Initialize socket.io with the HTTP server
 initSocket(server);
 
-server.listen(PORT, () => {
-    console.log("Server is running on PORT:" + PORT);
-});
+// Probe for an available port, preferring DESIRED_PORT, then next few
+function isPortFree(port) {
+    return new Promise((resolve) => {
+        const tester = net
+            .createServer()
+            .once("error", (err) => {
+                if (err && (err.code === "EADDRINUSE" || err.code === "EACCES")) {
+                    resolve(false);
+                } else {
+                    resolve(false);
+                }
+            })
+            .once("listening", () => {
+                tester.close(() => resolve(true));
+            })
+            .listen(port, "0.0.0.0");
+    });
+}
+
+async function choosePort(startPort, attempts = 10) {
+    for (let i = 0; i < attempts; i++) {
+        const port = startPort + i;
+        // eslint-disable-next-line no-await-in-loop
+        const free = await isPortFree(port);
+        if (free) return port;
+    }
+    return startPort; // fallback (server.listen will still error if occupied)
+}
+
+(async () => {
+    const port = await choosePort(DESIRED_PORT, 10);
+    if (port !== DESIRED_PORT) {
+        console.warn(`Desired port ${DESIRED_PORT} in use. Starting on ${port}.`);
+        process.env.PORT = String(port);
+    }
+    server.listen(port, () => {
+        console.log("Server is running on PORT:" + port);
+    });
+})();

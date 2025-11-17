@@ -18,7 +18,13 @@ const Sidebar = () => {
         fetchUnreadCounts(); // sync server-side unread counts at load
     }, [getUsers]);                             // Dependency array - only run once when component mounts
 
-    const filteredUsers = showOnlineOnly ? users.filter(user => onlineUsers.includes(user._id)) : users;
+    // Base filtered list
+    const baseFiltered = showOnlineOnly ? users.filter(user => onlineUsers.includes(user._id)) : users;
+    // Ensure the currently selected user stays visible at the top even if "online only" is enabled
+    // This prevents confusion when chatting with someone who is offline
+    const filteredUsers = (showOnlineOnly && selectedUser && !onlineUsers.includes(selectedUser._id))
+        ? [selectedUser, ...baseFiltered.filter(u => u._id !== selectedUser._id)]
+        : baseFiltered;
 
     // CONDITIONAL RENDER: Show skeleton while loading users
     if (isUsersLoading) return <SidebarSkeleton />;
