@@ -152,8 +152,19 @@ Client → Server
 - When adding features that affect message shape (e.g., reactions), update both the Mongoose schema and the frontend message rendering.
 - For unread counts across devices, add server‑side unread tracking; currently the client maintains unread per session.
 
-## Screenshots (optional)
-> Add screenshots or GIFs here to showcase the UI (Sidebar, Chat view, Profile).
+## Screenshots
+Add PNGs to `./screenshots/` and they will render below.
+
+| View | Image |
+|------|-------|
+| Register | ![Register](./screenshots/register.png) |
+| Login | ![Login](./screenshots/login.png) |
+| Profile | ![Profile](./screenshots/profile.png) |
+| Chat Window | ![Chat Window](./screenshots/chat-window.png) |
+| Chat List | ![Chat List](./screenshots/chat-list.png) |
+| Settings | ![Settings](./screenshots/settings.png) |
+
 
 ## Authors
-Samudyatha and Subavarsha
+Samudyatha K Bhat
+Subavarsha
