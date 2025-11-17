@@ -14,15 +14,40 @@ export const useChatStore = create((set, get) => ({
     isMessagesLoading: false,        // Loading state while fetching messages
     unreadCounts: {},                // Map of userId -> unread count
 
+    // internal: recents persistence in localStorage
+    _recentsKey: "chat_recent_timestamps",
+    _loadRecents: () => {
+        try {
+            const raw = localStorage.getItem(get()._recentsKey);
+            return raw ? JSON.parse(raw) : {};
+        } catch {
+            return {};
+        }
+    },
+    _saveRecents: (map) => {
+        try {
+            localStorage.setItem(get()._recentsKey, JSON.stringify(map || {}));
+        } catch {
+            // ignore quota/serialization issues
+        }
+    },
+    updateRecent: (userId) => {
+        if (!userId) return;
+        const map = { ...get()._loadRecents(), [userId]: Date.now() };
+        get()._saveRecents(map);
+    },
+
     // ACTION: Fetch all users available for chat (called in Sidebar)
     getUsers: async () => {
         set({ isUsersLoading: true }); // Show loading state
         try {
             // Request list of users from backend
             const res = await axiosInstance.get("/messages/users");
-            
-            // Update state with fetched users
-            set({ users: res.data });
+            const list = Array.isArray(res.data) ? res.data : [];
+            const recents = get()._loadRecents();
+            const sorted = [...list].sort((a, b) => (recents[b._id] || 0) - (recents[a._id] || 0));
+            // Update state with fetched users (sorted by recent activity)
+            set({ users: sorted });
         } catch (error) {
             // Show error notification to user
             toast.error(error.response.data.message);
@@ -76,6 +101,9 @@ export const useChatStore = create((set, get) => ({
 
             // Move the receiver to the top of the users list
             get().moveUserToTop(selectedUser._id);
+
+            // Persist recency so the last chatted user stays on top after reload
+            get().updateRecent(selectedUser._id);
 
             // Do NOT increment unread for outgoing messages
         } catch (error) {
@@ -147,6 +175,8 @@ export const useChatStore = create((set, get) => ({
             // Reorder sender to top in contacts
             if (newMessage?.senderId) {
                 get().moveUserToTop(newMessage.senderId);
+                // Persist recency for future sessions
+                get().updateRecent(newMessage.senderId);
             }
 
             // If message belongs to currently open conversation, append it
