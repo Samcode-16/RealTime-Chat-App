@@ -1,8 +1,15 @@
 import { useAuthStore } from "../store/useAuthstore";
-import {Camera, User, Mail} from "lucide-react";
+import {Camera, User, Mail, Info} from "lucide-react";
+import { useEffect, useState } from "react";
 
 const ProfilePage = () => {
-   const {authUser , isUpdatingProfile , updateProfile}=useAuthStore()
+  const {authUser , isUpdatingProfile , updateProfile, updateProfileInfo}=useAuthStore()
+  const [fullName, setFullName] = useState(authUser?.fullName || "");
+  const [bio, setBio] = useState(authUser?.bio || "");
+   useEffect(() => {
+     setFullName(authUser?.fullName || "");
+     setBio(authUser?.bio || "");
+   }, [authUser]);
 
    const handleImageUpload = async(e) => {
     const file = e.target.files[0];
@@ -72,23 +79,52 @@ const ProfilePage = () => {
               {isUpdatingProfile ? "Uploading..." : "Click the camera icon to update your photo"}
             </p>
           </div>
-          <div className="space-y-6">
+          <form
+            className="space-y-6"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              await updateProfileInfo({ fullName, bio });
+            }}
+          >
             <div className="space-y-1.5">
-              <div className="text-sm text-zinc-400 flex item-center gap-2">
+              <div className="text-sm text-zinc-400 flex items-center gap-2">
                 <User className="w-4 h-4" />
-
                 Full Name
-                </div>
-                <p className="px-4 py-2.5 bg-base-200 rounded-lg border">{authUser?.fullName}</p>
-                </div>
-                <div className="space-y-1.5">
-                  <div className="text-sm text-zinc-400 flex items-center gap-2">
-                    <Mail className="w-4 h-4" />
-                    Email Address
-                  </div>
-                  <p className="px-4 py-2.5 bg-base-200 rounded-lg border">{authUser?.email}</p>
-                </div>
-          </div>
+              </div>
+              <input
+                className="px-4 py-2.5 bg-base-200 rounded-lg border w-full"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Your name"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="text-sm text-zinc-400 flex items-center gap-2">
+                <Info className="w-4 h-4" />
+                Bio
+              </div>
+              <textarea
+                className="px-4 py-2.5 bg-base-200 rounded-lg border w-full min-h-24"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Tell others about you (max 280 chars)"
+                maxLength={280}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="text-sm text-zinc-400 flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                Email Address
+              </div>
+              <p className="px-4 py-2.5 bg-base-200 rounded-lg border">{authUser?.email}</p>
+            </div>
+
+            <div className="flex justify-end">
+              <button className="btn btn-primary" type="submit">Save changes</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

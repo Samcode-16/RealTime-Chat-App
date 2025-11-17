@@ -23,6 +23,11 @@ const ChatHeader = () => {
             <p className="text-sm text-base-content/70">
               {onlineUsers.includes(selectedUser._id) ? "Online" : "Offline"}
             </p>
+            {selectedUser.bio && (
+              <p className="text-xs text-base-content/70 mt-0.5 line-clamp-2 max-w-[220px]">
+                {selectedUser.bio}
+              </p>
+            )}
           </div>
         </div>
 

@@ -15,10 +15,52 @@ export const useAuthStore = create((set, get) => ({
   onlineUsers: [],
   socket: null,
 
+  // Initialize Socket.IO client when user is authenticated
+  initSocket: () => {
+    const { authUser, socket } = get();
+    if (!authUser || socket) return;
+
+    try {
+      const s = io(BASE_URL, {
+        query: { userId: authUser._id },
+        withCredentials: true,
+      });
+
+      // Store socket instance
+      set({ socket: s });
+
+      // Receive online users list from server
+      s.on("getOnlineUsers", (onlineIds) => {
+        set({ onlineUsers: Array.isArray(onlineIds) ? onlineIds : [] });
+      });
+
+      // Clean up local state when socket disconnects
+      s.on("disconnect", () => {
+        // Keep socket reference; server will re-emit when reconnected
+      });
+    } catch (e) {
+      console.error("Socket init failed:", e);
+    }
+  },
+
+  // Close socket and reset online list
+  cleanupSocket: () => {
+    const s = get().socket;
+    if (s) {
+      try {
+        s.off("getOnlineUsers");
+        s.close();
+      } catch {}
+    }
+    set({ socket: null, onlineUsers: [] });
+  },
+
   checkAuth: async () => {
     try {
       const res = await axiosInstance.get('/auth/check')
       set({ authUser: res.data })
+      // Once authenticated, connect socket
+      get().initSocket();
     } catch (error) {
       // If user is not authenticated, backend returns 401 — treat that as not-logged-in silently.
       const status = error?.response?.status
@@ -33,6 +75,7 @@ export const useAuthStore = create((set, get) => ({
               profilePic: '/avatar.png',
             },
           })
+          get().initSocket();
         } else {
           set({ authUser: null })
         }
@@ -50,6 +93,7 @@ export const useAuthStore = create((set, get) => ({
       set({ isSigningUp: true })
       const res = await axiosInstance.post('/auth/signup', data)
       set({ authUser: res.data })
+      get().initSocket();
       toast.success('Account created successfully!')
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Signup failed')
@@ -63,6 +107,7 @@ export const useAuthStore = create((set, get) => ({
     try {
       const res = await axiosInstance.post('/auth/login', data)
       set({ authUser: res.data })
+      get().initSocket();
       toast.success('Logged in successfully')
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Login failed')
@@ -73,6 +118,8 @@ export const useAuthStore = create((set, get) => ({
 
   logout: async () => {
     try {
+      // Close socket before logging out
+      get().cleanupSocket();
       await axiosInstance.post('/auth/logout')
       set({ authUser: null })
       toast.success('Logged out successfully')
@@ -99,6 +146,17 @@ export const useAuthStore = create((set, get) => ({
       toast.error(error?.response?.data?.message || "Couldn't update profile picture");
     } finally {
       set({ isUpdatingProfile: false });
+    }
+  },
+
+  // update name and bio
+  updateProfileInfo: async (payload) => {
+    try {
+      const res = await axiosInstance.patch("/auth/update-info", payload);
+      set({ authUser: res.data });
+      toast.success("Profile updated");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Couldn't update profile");
     }
   },
 }));

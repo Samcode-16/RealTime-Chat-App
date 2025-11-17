@@ -19,6 +19,24 @@ const messageSchema = new mongoose.Schema(
         image: {
             type: String,
         },
+        delivered: {
+            type: Boolean,
+            default: false,
+        },
+        read: {
+            type: Boolean,
+            default: false,
+        },
+        deletedForEveryone: {
+            type: Boolean,
+            default: false,
+        },
+        hiddenFor: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User",
+            },
+        ],
     },
     { timestamps: true }  
 );

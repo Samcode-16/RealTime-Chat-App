@@ -12,6 +12,7 @@ export const useChatStore = create((set, get) => ({
     selectedUser: null,              // Currently selected user for chatting
     isUsersLoading: false,           // Loading state while fetching users
     isMessagesLoading: false,        // Loading state while fetching messages
+    unreadCounts: {},                // Map of userId -> unread count
 
     // ACTION: Fetch all users available for chat (called in Sidebar)
     getUsers: async () => {
@@ -59,35 +60,143 @@ export const useChatStore = create((set, get) => ({
             // Optimistically update UI by adding new message to state
             // Spread existing messages and add the new one from response
             set({ messages: [...messages, res.data] });
+
+            // Move the receiver to the top of the users list
+            get().moveUserToTop(selectedUser._id);
+
+            // Do NOT increment unread for outgoing messages
         } catch (error) {
             // Show error notification to user
             toast.error(error.response.data.message);
         }
     },
 
-    subscribeToMessages: () => {
-        const { selectedUser }= get();
-        if(!selectedUser) return;
+    // ACTION: Delete a message only for me (hide locally)
+    deleteMessageForMe: async (messageId) => {
+        try {
+            await axiosInstance.delete(`/messages/${messageId}?for=me`);
+            set({ messages: get().messages.filter((m) => m._id !== messageId) });
+        } catch (error) {
+            toast.error(error?.response?.data?.message || "Failed to delete");
+        }
+    },
 
-        const socket = useAuthStore.getState().socket;
-
-        
-        socket.on("newMessage", (newMessage) => {
-            const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
-            if(!isMessageSentFromSelectedUser) return;
-
+    // ACTION: Delete a message for everyone (sender only)
+    deleteMessageForEveryone: async (messageId) => {
+        try {
+            await axiosInstance.delete(`/messages/${messageId}?for=all`);
+            // optimistic update
             set({
-                messages: [...get().messages, newMessage],
+                messages: get().messages.map((m) =>
+                    m._id === messageId ? { ...m, deletedForEveryone: true, text: "", image: undefined } : m
+                ),
+            });
+        } catch (error) {
+            toast.error(error?.response?.data?.message || "Failed to delete for everyone");
+        }
+    },
+
+    // HELPER: Move a user to the top of the users list without in-place mutation
+    moveUserToTop: (userId) => {
+        const users = get().users || [];
+        const index = users.findIndex(u => u._id === userId);
+        if (index === -1) return; // user not in list, nothing to reorder
+
+        const reordered = [users[index], ...users.filter((_, i) => i !== index)];
+        set({ users: reordered });
+    },
+
+    // HELPER: Increment unread count for a user
+    incrementUnread: (userId) => {
+        if (!userId) return;
+        const current = get().unreadCounts || {};
+        const next = { ...current, [userId]: (current[userId] || 0) + 1 };
+        set({ unreadCounts: next });
+    },
+
+    // HELPER: Clear unread count for a user
+    clearUnread: (userId) => {
+        if (!userId) return;
+        const current = get().unreadCounts || {};
+        if (!current[userId]) return;
+        const { [userId]: _, ...rest } = current;
+        set({ unreadCounts: rest });
+    },
+
+    subscribeToMessages: () => {
+        const socket = useAuthStore.getState().socket;
+        if (!socket) return;
+
+        socket.on("newMessage", (newMessage) => {
+            const currentSelected = get().selectedUser;
+            const currentMessages = get().messages;
+
+            // Reorder sender to top in contacts
+            if (newMessage?.senderId) {
+                get().moveUserToTop(newMessage.senderId);
+            }
+
+            // If message belongs to currently open conversation, append it
+            if (currentSelected && newMessage.senderId === currentSelected._id) {
+                set({ messages: [...currentMessages, newMessage] });
+                // Emit read immediately for messages in the active chat
+                socket.emit("messageRead", newMessage._id);
+                // No unread bump for the active conversation
+                return;
+            }
+
+            // Otherwise, bump unread count for the sender
+            if (newMessage?.senderId) {
+                get().incrementUnread(newMessage.senderId);
+            }
+
+            // Always acknowledge delivery to the server
+            socket.emit("messageDelivered", newMessage._id);
+        });
+
+        // Update local message status when the server confirms delivery
+        socket.on("messageDelivered", ({ messageId }) => {
+            const list = get().messages;
+            if (!Array.isArray(list) || !messageId) return;
+            const updated = list.map(m => m._id === messageId ? { ...m, delivered: true } : m);
+            set({ messages: updated });
+        });
+
+        // Update local message status when the server confirms read
+        socket.on("messageRead", ({ messageId }) => {
+            const list = get().messages;
+            if (!Array.isArray(list) || !messageId) return;
+            const updated = list.map(m => m._id === messageId ? { ...m, delivered: true, read: true } : m);
+            set({ messages: updated });
+        });
+
+        // Other-side deleted for everyone
+        socket.on("messageDeletedForEveryone", ({ messageId }) => {
+            if (!messageId) return;
+            set({
+                messages: get().messages.map((m) =>
+                    m._id === messageId ? { ...m, deletedForEveryone: true, text: "", image: undefined } : m
+                ),
             });
         });
     },
 
     unsubscribeFromMessages: () => {
         const socket = useAuthStore.getState().socket;
+        if (!socket) return;
         socket.off("newMessage");
+        socket.off("messageDelivered");
+        socket.off("messageRead");
+        socket.off("messageDeletedForEveryone");
     },
 
     // ACTION: Set the currently selected user for chat (called when clicking user in Sidebar)
-    setSelectedUser: (selectedUser) => set({ selectedUser }),
+    setSelectedUser: (selectedUser) => {
+        set({ selectedUser });
+        if (selectedUser?._id) {
+            // Clear unread when user opens the conversation
+            get().clearUnread(selectedUser._id);
+        }
+    },
 }));
 

@@ -6,7 +6,7 @@ import { Users } from "lucide-react";
 
 const Sidebar = () => {
     // HOOK: Get chat state and actions from store
-    const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading } = useChatStore();
+    const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading, unreadCounts } = useChatStore();
 
     // HOOK: Get online users array from auth store
     const { onlineUsers } = useAuthStore();
@@ -71,11 +71,19 @@ const Sidebar = () => {
                                 className="absolute bottom-0 right-0 size-3 bg-green-500 rounded-full ring-2 ring-zinc-900"
                             />
                         )}
+                        {/* Unread badge on avatar */}
+                        {!!unreadCounts?.[user._id] && (
+                          <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-primary text-primary-content text-[10px] flex items-center justify-center">
+                            {unreadCounts[user._id]}
+                          </span>
+                        )}
                     </div>
 
                     {/* User info - only visible on larger screens */}
                     <div className="hidden lg:block text-left min-w-0">
-                        <div className="font-medium truncate">{user.fullName}</div>
+                        <div className={`font-medium truncate ${unreadCounts?.[user._id] ? "font-semibold" : ""}`}>
+                          {user.fullName}
+                        </div>
                         <div className="text-sm text-zinc-400">
                             {/* Show "Online" or "Offline" based on onlineUsers array */}
                             {onlineUsers.includes(user._id) ? "Online" : "Offline"}

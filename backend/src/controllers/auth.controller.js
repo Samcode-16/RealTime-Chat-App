@@ -52,6 +52,7 @@ export const signup = async (req ,res) => {
             fullName: newUser.fullName,
             email: newUser.email,
             profilePic: newUser.profilePic,
+            bio: newUser.bio,
         });
     } else {
         res.status(400).json({message: "Invalid user data"});
@@ -88,6 +89,7 @@ export const login = async (req ,res) => {
             fullName: user.fullName,
             email: user.email,
             profilePic: user.profilePic,
+            bio: user.bio,
         });
     }
     catch(error) {
@@ -122,6 +124,7 @@ export const check = async (req, res) => {
             fullName: user.fullName,
             email: user.email,
             profilePic: user.profilePic,
+            bio: user.bio,
         });
     } catch (error) {
         console.log('Error in check controller', error.message);
@@ -153,11 +156,41 @@ export const updateProfile = async (req, res) => {
             fullName: user.fullName,
             email: user.email,
             profilePic: user.profilePic,
+            bio: user.bio,
         });
 
     } catch (error) {
         console.log("Error in updateProfile controller", error.message);
         res.status(500).json({ message: "Error uploading profile picture" });
+    }
+};
+
+// update profile info (name and bio)
+export const updateProfileInfo = async (req, res) => {
+    try {
+        const { fullName, bio } = req.body || {};
+
+        const update = {};
+        if (typeof fullName === "string" && fullName.trim()) update.fullName = fullName.trim();
+        if (typeof bio === "string") update.bio = bio.slice(0, 280);
+
+        if (Object.keys(update).length === 0) {
+            return res.status(400).json({ message: "No valid fields to update" });
+        }
+
+        const user = await User.findByIdAndUpdate(req.user._id, update, { new: true }).select("-password");
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        res.status(200).json({
+            _id: user._id,
+            fullName: user.fullName,
+            email: user.email,
+            profilePic: user.profilePic,
+            bio: user.bio,
+        });
+    } catch (error) {
+        console.log("Error in updateProfileInfo controller", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
     }
 };
 

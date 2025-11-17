@@ -7,6 +7,7 @@ import ProfilePage from "./pages/ProfilePage";
 
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthstore";
+import { useChatStore } from "./store/useChatStore";
 
 import { useEffect } from "react";
 import { Loader } from "lucide-react";
@@ -14,13 +15,23 @@ import { Toaster } from "react-hot-toast";
 import { useThemeStore } from "./store/useTHEMEStore";
 
 const App = () => {
-  const { authUser, isCheckingAuth, checkAuth , onlineUsers} = useAuthStore();
+  const { authUser, isCheckingAuth, checkAuth , onlineUsers, socket} = useAuthStore();
+  const { subscribeToMessages, unsubscribeFromMessages } = useChatStore();
   const { theme } = useThemeStore(); 
 
   console.log({ onlineUsers });
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  // Global socket message subscription so reordering/unread works even without an open chat
+  useEffect(() => {
+    if (!socket) return;
+    subscribeToMessages();
+    return () => {
+      unsubscribeFromMessages();
+    };
+  }, [socket, subscribeToMessages, unsubscribeFromMessages]);
 
   console.log({ authUser });
 

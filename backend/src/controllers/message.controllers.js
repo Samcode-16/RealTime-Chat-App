@@ -39,10 +39,15 @@ export const getMessages = async(req, res) => {
         // 1. I sent to them, OR
         // 2. They sent to me
         const messages = await Message.find({
-            $or: [
-                {senderId: myId, receiverId: userToChatId},
-                {senderId: userToChatId, receiverId: myId}
-            ]
+            $and: [
+                {
+                    $or: [
+                        { senderId: myId, receiverId: userToChatId },
+                        { senderId: userToChatId, receiverId: myId },
+                    ],
+                },
+                { hiddenFor: { $ne: myId } },
+            ],
         })
 
         // Send messages array as JSON response
@@ -113,5 +118,56 @@ export const sendMessage = async (req, res) => {
         console.log("Error in sendMessage controller: ", error.message);
         console.error("Full error:", error);
         res.status(500).json({error: "Internal server error"});
+    }
+}
+
+// CONTROLLER: Delete a message
+// DELETE /api/messages/:id?for=me | ?for=all
+export const deleteMessage = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const scope = (req.query.for || "").toLowerCase();
+        const userId = req.user._id;
+
+        const msg = await Message.findById(id);
+        if (!msg) return res.status(404).json({ message: "Message not found" });
+
+        if (scope === "me") {
+            const alreadyHidden = (msg.hiddenFor || []).some((u) => String(u) === String(userId));
+            if (!alreadyHidden) {
+                msg.hiddenFor = [...(msg.hiddenFor || []), userId];
+                await msg.save();
+            }
+            return res.status(200).json({ ok: true, messageId: id });
+        }
+
+        if (scope === "all") {
+            // Only sender can delete for everyone
+            if (String(msg.senderId) !== String(userId)) {
+                return res.status(403).json({ message: "Only sender can delete for everyone" });
+            }
+            msg.deletedForEveryone = true;
+            msg.text = "";
+            msg.image = undefined;
+            await msg.save();
+
+            // Notify both parties via socket (if online)
+            const { io, getReceiverSocketId } = await import("../lib/socket.js");
+            try {
+                const receiverSocketId = getReceiverSocketId(String(msg.receiverId));
+                if (receiverSocketId) io.to(receiverSocketId).emit("messageDeletedForEveryone", { messageId: id });
+                const senderSocketId = getReceiverSocketId(String(msg.senderId));
+                if (senderSocketId) io.to(senderSocketId).emit("messageDeletedForEveryone", { messageId: id });
+            } catch (e) {
+                console.error("Emit messageDeletedForEveryone failed:", e?.message);
+            }
+
+            return res.status(200).json({ ok: true, messageId: id });
+        }
+
+        return res.status(400).json({ message: "Invalid query. Use ?for=me or ?for=all" });
+    } catch (error) {
+        console.error("Error in deleteMessage controller:", error);
+        res.status(500).json({ error: "Internal server error" });
     }
 }

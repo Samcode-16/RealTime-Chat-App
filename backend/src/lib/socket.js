@@ -1,4 +1,5 @@
 import { Server } from "socket.io";
+import Message from "../models/message.model.js";
 
 // Socket.IO instance will be assigned when initialized with a server
 let io;
@@ -36,6 +37,46 @@ export function initSocket(server) {
             if (userId) delete userSocketMap[userId];
             // Broadcast updated list of online users to ALL clients
             io.emit("getOnlineUsers", Object.keys(userSocketMap));
+        });
+
+        // DELIVERY ACK: Receiver notifies server that a message reached them
+        socket.on("messageDelivered", async (messageId) => {
+            try {
+                if (!messageId) return;
+                const updated = await Message.findByIdAndUpdate(
+                    messageId,
+                    { delivered: true },
+                    { new: true }
+                );
+                if (!updated) return;
+                const senderId = updated.senderId?.toString();
+                const targetSocketId = userSocketMap[senderId];
+                if (targetSocketId) {
+                    io.to(targetSocketId).emit("messageDelivered", { messageId: updated._id.toString() });
+                }
+            } catch (e) {
+                console.error("messageDelivered handler error:", e.message);
+            }
+        });
+
+        // READ ACK: Receiver confirms they have read a message
+        socket.on("messageRead", async (messageId) => {
+            try {
+                if (!messageId) return;
+                const updated = await Message.findByIdAndUpdate(
+                    messageId,
+                    { read: true, delivered: true },
+                    { new: true }
+                );
+                if (!updated) return;
+                const senderId = updated.senderId?.toString();
+                const targetSocketId = userSocketMap[senderId];
+                if (targetSocketId) {
+                    io.to(targetSocketId).emit("messageRead", { messageId: updated._id.toString() });
+                }
+            } catch (e) {
+                console.error("messageRead handler error:", e.message);
+            }
         });
     });
 }
