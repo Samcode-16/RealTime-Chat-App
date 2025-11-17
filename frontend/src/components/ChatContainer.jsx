@@ -4,8 +4,8 @@ import { useEffect, useRef, useMemo } from "react";
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import { useAuthStore } from "../store/useAuthstore";
-import { formatMessageTime } from "../lib/utils";
-import { Check, CheckCheck, MoreVertical } from "lucide-react";
+import { formatMessageTime, cloudinaryAttachmentUrl } from "../lib/utils";
+import { Check, CheckCheck, MoreVertical, Paperclip } from "lucide-react";
 
 const ChatContainer = () => {
   // HOOK: Get chat state and actions from Zustand store
@@ -116,6 +116,28 @@ const ChatContainer = () => {
                   alt="attachment" 
                   className="sm:max-w-[200px] rounded-md mb-2"
                 />
+              )}
+              {/* Show file attachment link if present (non-image) */}
+              {!message.deletedForEveryone && message.fileUrl && (
+                <div className="mt-1 flex items-center gap-3 text-sm">
+                  <a
+                    href={message.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 underline"
+                  >
+                    <Paperclip className="w-4 h-4" />
+                    <span className="truncate max-w-[200px]" title={message.fileName || "Attachment"}>
+                      {message.fileName || "Attachment"}
+                    </span>
+                  </a>
+                  <a
+                    href={`/api/messages/file/download/${message._id}`}
+                    className="link"
+                  >
+                    Download
+                  </a>
+                </div>
               )}
               {/* Show text if message has text */}
               {message.deletedForEveryone ? (

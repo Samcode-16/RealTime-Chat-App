@@ -31,6 +31,19 @@ export const useChatStore = create((set, get) => ({
         }
     },
 
+    // ACTION: Fetch server-side unread counts grouped by sender
+    fetchUnreadCounts: async () => {
+        try {
+            const res = await axiosInstance.get("/messages/unread-counts/all");
+            if (res?.data && typeof res.data === "object") {
+                set({ unreadCounts: res.data });
+            }
+        } catch (error) {
+            // best-effort; keep client-side fallbacks
+            console.warn("Unread counts fetch failed:", error?.response?.data || error?.message);
+        }
+    },
+
     // ACTION: Fetch messages for a specific user (called when user is selected)
     getMessages: async(userId) => {
         set({ isMessagesLoading: true }); // Show loading state
@@ -88,7 +101,7 @@ export const useChatStore = create((set, get) => ({
             // optimistic update
             set({
                 messages: get().messages.map((m) =>
-                    m._id === messageId ? { ...m, deletedForEveryone: true, text: "", image: undefined } : m
+                    m._id === messageId ? { ...m, deletedForEveryone: true, text: "", image: undefined, fileUrl: undefined, fileName: undefined, fileType: undefined } : m
                 ),
             });
         } catch (error) {
@@ -175,9 +188,16 @@ export const useChatStore = create((set, get) => ({
             if (!messageId) return;
             set({
                 messages: get().messages.map((m) =>
-                    m._id === messageId ? { ...m, deletedForEveryone: true, text: "", image: undefined } : m
+                    m._id === messageId ? { ...m, deletedForEveryone: true, text: "", image: undefined, fileUrl: undefined, fileName: undefined, fileType: undefined } : m
                 ),
             });
+        });
+
+        // Server-side unread count updates for a specific sender
+        socket.on("unreadUpdated", ({ from, count }) => {
+            if (!from) return;
+            const current = get().unreadCounts || {};
+            set({ unreadCounts: { ...current, [from]: count } });
         });
     },
 
@@ -188,6 +208,7 @@ export const useChatStore = create((set, get) => ({
         socket.off("messageDelivered");
         socket.off("messageRead");
         socket.off("messageDeletedForEveryone");
+        socket.off("unreadUpdated");
     },
 
     // ACTION: Set the currently selected user for chat (called when clicking user in Sidebar)

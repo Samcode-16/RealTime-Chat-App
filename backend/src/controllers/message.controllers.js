@@ -1,5 +1,6 @@
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
+import { Readable } from "stream";
 
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
@@ -64,7 +65,7 @@ export const getMessages = async(req, res) => {
 export const sendMessage = async (req, res) => {
     try {
         // Extract message data from request body
-        const { text, image } = req.body;
+        const { text, image, file, fileName, fileType } = req.body;
         
         // Extract receiver ID from URL parameter
         const { id: receiverId } = req.params;
@@ -73,6 +74,7 @@ export const sendMessage = async (req, res) => {
         const senderId = req.user._id;
 
         let imageUrl = null;
+        let uploadedFileUrl = null;
         
         // If message includes an image, upload it to Cloudinary
         if (image) {
@@ -93,12 +95,29 @@ export const sendMessage = async (req, res) => {
             }
         }
 
+        // If message includes a file (non-image), upload as raw to Cloudinary
+        if (file) {
+            try {
+                const uploadResponse = await cloudinary.uploader.upload(file, {
+                    folder: "chat-app-files",
+                    resource_type: "raw",
+                });
+                uploadedFileUrl = uploadResponse.secure_url;
+            } catch (uploadError) {
+                console.error("Cloudinary file upload error:", uploadError);
+                return res.status(500).json({ error: "Failed to upload file" });
+            }
+        }
+
         // Create new message document in database
         const newMessage = new Message({
             senderId,
             receiverId,
             text,
             image: imageUrl, // URL from Cloudinary or null
+            fileUrl: uploadedFileUrl || undefined,
+            fileName: uploadedFileUrl ? (fileName || "file") : undefined,
+            fileType: uploadedFileUrl ? (fileType || "application/octet-stream") : undefined,
         });
 
         // Save message to MongoDB
@@ -109,6 +128,18 @@ export const sendMessage = async (req, res) => {
         if (receiverSocketId) {
             // Emit "newMessage" event to specific user's socket
             io.to(receiverSocketId).emit("newMessage", newMessage);
+
+            // Server-side unread tracking: emit updated count for this sender to receiver
+            try {
+                const unreadCount = await Message.countDocuments({
+                    receiverId,
+                    senderId,
+                    read: false,
+                });
+                io.to(receiverSocketId).emit("unreadUpdated", { from: senderId.toString(), count: unreadCount });
+            } catch (e) {
+                console.error("Error computing unread count:", e.message);
+            }
         }
         
         // Send saved message back to sender as confirmation
@@ -149,6 +180,9 @@ export const deleteMessage = async (req, res) => {
             msg.deletedForEveryone = true;
             msg.text = "";
             msg.image = undefined;
+            msg.fileUrl = undefined;
+            msg.fileName = undefined;
+            msg.fileType = undefined;
             await msg.save();
 
             // Notify both parties via socket (if online)
@@ -171,3 +205,67 @@ export const deleteMessage = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 }
+
+// CONTROLLER: Get unread counts per sender for the current user
+// GET /api/messages/unread-counts -> { [senderId]: count }
+export const getUnreadCounts = async (req, res) => {
+    try {
+        const myId = req.user._id;
+        const pipeline = [
+            { $match: { receiverId: myId, read: false } },
+            { $group: { _id: "$senderId", count: { $sum: 1 } } },
+        ];
+        const agg = await Message.aggregate(pipeline);
+        const map = {};
+        for (const row of agg) {
+            map[row._id.toString()] = row.count;
+        }
+        res.status(200).json(map);
+    } catch (error) {
+        console.error("Error in getUnreadCounts:", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+// CONTROLLER: Securely download an attached file via server proxy
+// GET /api/messages/file/download/:id
+export const downloadAttachment = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const me = req.user._id;
+        const msg = await Message.findById(id);
+        if (!msg) return res.status(404).json({ error: "Message not found" });
+        if (!msg.fileUrl) return res.status(400).json({ error: "No attachment on this message" });
+
+        // Only participants can download
+        const isParticipant = String(msg.senderId) === String(me) || String(msg.receiverId) === String(me);
+        if (!isParticipant) return res.status(403).json({ error: "Forbidden" });
+
+        const storageUrl = msg.fileUrl;
+        const filename = msg.fileName || "attachment";
+
+        // Use built-in fetch (Node 18+) which follows redirects
+        const fileRes = await fetch(storageUrl);
+        if (!fileRes.ok) {
+            return res.status(fileRes.status).send("Failed to fetch file from storage");
+        }
+
+        const contentType = fileRes.headers.get("content-type") || msg.fileType || "application/octet-stream";
+        const contentLength = fileRes.headers.get("content-length");
+
+        res.setHeader("Content-Type", contentType);
+        if (contentLength) res.setHeader("Content-Length", contentLength);
+        // RFC 5987 for UTF-8 filenames
+        res.setHeader(
+            "Content-Disposition",
+            `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`
+        );
+
+        // Pipe the web stream to Node response
+        const nodeStream = Readable.fromWeb(fileRes.body);
+        nodeStream.pipe(res);
+    } catch (error) {
+        console.error("Error in downloadAttachment:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};

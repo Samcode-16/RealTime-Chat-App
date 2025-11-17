@@ -6,7 +6,7 @@ import { Users } from "lucide-react";
 
 const Sidebar = () => {
     // HOOK: Get chat state and actions from store
-    const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading, unreadCounts } = useChatStore();
+    const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading, unreadCounts, fetchUnreadCounts } = useChatStore();
 
     // HOOK: Get online users array from auth store
     const { onlineUsers } = useAuthStore();
@@ -15,6 +15,7 @@ const Sidebar = () => {
     // EFFECT: Fetch all users when component mounts
     useEffect(() => {
         getUsers();                             // Call action to fetch users from backend
+        fetchUnreadCounts(); // sync server-side unread counts at load
     }, [getUsers]);                             // Dependency array - only run once when component mounts
 
     const filteredUsers = showOnlineOnly ? users.filter(user => onlineUsers.includes(user._id)) : users;

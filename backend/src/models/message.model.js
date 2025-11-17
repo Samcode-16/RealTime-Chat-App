@@ -19,6 +19,15 @@ const messageSchema = new mongoose.Schema(
         image: {
             type: String,
         },
+        fileUrl: {
+            type: String,
+        },
+        fileName: {
+            type: String,
+        },
+        fileType: {
+            type: String,
+        },
         delivered: {
             type: Boolean,
             default: false,

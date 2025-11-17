@@ -18,7 +18,7 @@ import { initSocket } from "./lib/socket.js";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 const __dirname = path.resolve();
 
 // Create HTTP server and attach socket.io later
