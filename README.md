@@ -16,8 +16,21 @@ This is our college project where we tried to implement a full‑stack, real‑t
 11. Profile edits (name, bio, avatar) — Auth endpoints + Cloudinary
 
 ## **Tech Stack**
-- Frontend: React 18, Vite, Zustand, React Router, Axios, Tailwind CSS, DaisyUI, lucide‑react
-- Backend: Node.js, Express, MongoDB (Mongoose), Socket.IO, Cloudinary
+- Frontend:
+	- React 18
+	- Vite
+	- Zustand
+	- React Router
+	- Axios
+	- Tailwind CSS
+	- DaisyUI
+	- lucide‑react
+- Backend:
+	- Node.js
+	- Express
+	- MongoDB (Mongoose)
+	- Socket.IO
+	- Cloudinary
 
 ## **Setup**
 Create `backend/.env`:
@@ -46,10 +59,14 @@ Add PNGs to `./screenshots/`.
 
 | View | Image |
 |------|-------|
+| Register | ![Register](./screenshots/register.png) |
+| Login | ![Login](./screenshots/login.png) |
 | Chat Window | ![Chat Window](./screenshots/chat-window.png) |
 | Sidebar | ![Sidebar](./screenshots/chat-list.png) |
 | Profile | ![Profile](./screenshots/profile.png) |
+| Settings | ![Settings](./screenshots/settings.png) |
 
 ## **Authors**
 • Samudyatha K Bhat
+
 • Subavarsha
