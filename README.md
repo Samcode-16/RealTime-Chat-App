@@ -51,4 +51,5 @@ Add PNGs to `./screenshots/`.
 | Profile | ![Profile](./screenshots/profile.png) |
 
 ## **Authors**
-Samudyatha K Bhat • Subavarsha
+• Samudyatha K Bhat
+• Subavarsha
