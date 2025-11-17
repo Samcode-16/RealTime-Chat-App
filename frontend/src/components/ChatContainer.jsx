@@ -5,7 +5,7 @@ import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import { useAuthStore } from "../store/useAuthstore";
 import { formatMessageTime, cloudinaryAttachmentUrl } from "../lib/utils";
-import { Check, CheckCheck, MoreVertical, Paperclip } from "lucide-react";
+import { Check, CheckCheck, MoreVertical, Paperclip, Download } from "lucide-react";
 
 const ChatContainer = () => {
   // HOOK: Get chat state and actions from Zustand store
@@ -92,9 +92,9 @@ const ChatContainer = () => {
             </div>
             
             {/* Message bubble containing text and/or image */}
-            <div className="chat-bubble flex flex-col relative group">
+            <div className="chat-bubble flex flex-col relative group pr-8 pt-5">
               {/* Dropdown for delete actions */}
-              <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <details className="dropdown dropdown-end">
                   <summary className="btn btn-ghost btn-xs"><MoreVertical className="w-4 h-4" /></summary>
                   <ul className="dropdown-content menu menu-sm bg-base-100 rounded-box shadow z-[1] w-48">
@@ -133,9 +133,11 @@ const ChatContainer = () => {
                   </a>
                   <a
                     href={`/api/messages/file/download/${message._id}`}
-                    className="link"
+                    className="link inline-flex items-center"
+                    title="Download"
+                    aria-label="Download file"
                   >
-                    Download
+                    <Download className="w-4 h-4" />
                   </a>
                 </div>
               )}
