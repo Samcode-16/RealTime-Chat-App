@@ -1,6 +1,6 @@
 # RealTime Chat App
 
-Fast, real‑time 1:1 chat with presence, unread badges, delivery/read ticks, image/file sharing, and profile edits. Built with React + Vite, Zustand, Tailwind/DaisyUI, Node/Express, MongoDB (Mongoose), Socket.IO, and Cloudinary.
+This is our college project where we tried to implement a full‑stack, real‑time 1:1 chat app end‑to‑end. It includes presence, unread badges, delivery/read ticks, image/file sharing, and profile edits. Built with React + Vite, Zustand, Tailwind/DaisyUI, Node/Express, MongoDB (Mongoose), Socket.IO, and Cloudinary.
 
 ## **Features**
 1. Real‑time private messaging — Socket.IO (targeted emits)
